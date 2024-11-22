@@ -1,0 +1,22 @@
+MA['coincide_orientacion'] = MA['orientacionImg'] == MA['orientaciontratamiento']
+
+si_orienta_count = MA['coincide_orientacion'].sum()
+no_orienta_count = len(MA) - si_orienta_count
+
+id_no_orienta = MA.loc[~MA['coincide_orientacion'], 'pacienteid'].tolist()
+
+orienta = [si_orienta_count, no_orienta_count]
+labels = ['Sí', 'No']
+
+textstr3 = "ID no coincide orientación:\n" + '\n'.join(map(str, id_no_orienta))
+props3 = dict(boxstyle='round', facecolor='red', alpha=0.5)
+
+sns.set(rc={'figure.figsize': (8, 6)})
+for i, value in enumerate(orienta):
+    plt.text(i, value + 2, str(value), ha='center', fontsize=12)
+
+plt.bar(labels, orienta, color=['green', 'red'], alpha=0.5, edgecolor="black")
+plt.title("¿Coincide la orientación del tratamiento con la orientación de la imagen?", size=18, fontname="DejaVu Sans", fontweight="bold")
+plt.ylabel("Cantidad", size=14, fontname="DejaVu Sans")
+plt.text(1.5, 0, textstr3, bbox=props3)
+plt.show()

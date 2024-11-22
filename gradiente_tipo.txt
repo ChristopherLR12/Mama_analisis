@@ -1,0 +1,90 @@
+#Tipo de tratamiento
+
+id_VMAT = []
+id_IMRT = []
+id_conf = []
+
+for i in range(len(MA["accesorio"])):
+    if MA["accesorio"][i] == "MLC-VMAT":
+        id_VMAT.append(MA["pacienteid"][i])
+    elif MA["accesorio"][i] == "MLC-IMRT":
+        id_IMRT.append(MA["pacienteid"][i])
+    else:
+        id_conf.append(MA["pacienteid"][i])
+
+counts = [len(id_conf),len(id_VMAT), len(id_IMRT)]
+labels = ['Conformal','VMAT', 'IMRT']
+
+sns.set(rc={'figure.figsize':(8,6)})
+bars = plt.bar(labels, counts, color=['blue', 'orange', 'green'], edgecolor="black", alpha=0.5)
+
+for bar in bars:
+    height = bar.get_height()
+    plt.text(bar.get_x() + bar.get_width()/2.0, height, str(height), ha='center', va='bottom', fontsize=12)
+
+plt.title("Tipos de tratamiento",size=18,fontname="DejaVu Sans",fontweight="bold")
+plt.xlabel("Tipo",size=14,fontname="DejaVu Sans")
+plt.ylabel("#",size=14,fontname="DejaVu Sans")
+plt.xticks()
+plt.show()
+#plt.savefig("tipos_trat.pdf",bbox_inches="tight")
+
+################################
+
+# Gradiente máximo por tipo de tratamiento
+
+grad_max = {
+    'Conformal': 16,  # gradiente máximo para Conformal
+    'VMAT': 12,       # gradiente máximo para VMAT
+    'IMRT': 12        # gradiente máximo para IMRT
+}
+
+gradientes_clasificados = []
+
+for i in range(len(MA["pacienteid"])):
+    paciente_id = MA["pacienteid"][i]
+    gradiente = (MA["DoseMax3D"][i] / MA["dosisTotal"][i]) * 100 - 100
+
+    if paciente_id in id_VMAT:
+        tipo = 'VMAT'
+    elif paciente_id in id_IMRT:
+        tipo = 'IMRT'
+    elif paciente_id in id_conf:
+        tipo = 'Conformal'
+    else:
+        continue
+
+    limite = grad_max[tipo]
+    if gradiente <= limite:
+        gradientes_clasificados.append(('Sí', gradiente, tipo))
+    else:
+        gradientes_clasificados.append(('No', gradiente, tipo))
+
+df_gradientes = pd.DataFrame(gradientes_clasificados, columns=['Estado', 'Gradiente', 'Tipo'])
+
+data_agrupada = df_gradientes.groupby(["Tipo", "Estado"]).size().unstack(fill_value=0)
+
+sns.set(rc={'figure.figsize': (8, 6)})
+
+colors = {"Sí": "green", "No": "red"}
+orden = ["Sí", "No"]
+
+for tipo in tipos:
+    valores = data_agrupada.loc[tipo]
+    valores = valores.reindex(orden, fill_value=0)
+
+    labels = valores.index
+    counts = valores.values
+
+    plt.bar(labels, counts, color=[colors[label] for label in labels], alpha=0.5, edgecolor="black")
+
+    for i, value in enumerate(counts):
+        plt.text(i, value + 0.5, str(value), ha='center', fontsize=12)
+
+    limite = grad_max[tipo]
+    plt.title(f"¿El gradiente de dosis máxima para {tipo} es menor al {limite}%?",
+              size=18, fontname="DejaVu Sans", fontweight="bold")
+    #plt.xlabel("Estado", fontname="DejaVu Sans", size=14)
+    plt.ylabel("Cantidad", fontname="DejaVu Sans", size=14)
+    plt.ylim(0, max(counts) + 5)
+    plt.show()
